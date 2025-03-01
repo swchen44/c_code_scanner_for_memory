@@ -4,6 +4,7 @@ import re
 import argparse
 import google.generativeai as genai
 import openai
+import json
 
 class AIModel:
     def __init__(self):
@@ -120,35 +121,29 @@ def scan_c_code(c_code_file, prompt_file, output_csv_file, ai_model):
         print(f"Error: An error occurred during the scanning process: {e}")
 
 
-if __name__ == '__main__':
-    # Create argument parser
-    parser = argparse.ArgumentParser(description="Scans C source code for bugs and memory inefficiencies using Google AI's REST API.")
-    parser.add_argument("c_code_file", nargs='?', default='defective.c', help="Path to the C source code file")
-    parser.add_argument("prompt_file", nargs='?', default='prompt.txt', help="Path to the prompt file")
-    parser.add_argument("output_csv_file", nargs='?', default='output.csv', help="Path to the output CSV file")
-    parser.add_argument("--model", default="gemini", choices=["gemini", "openai"], help="Choose the AI model to use (gemini or openai)")
+def load_custom_rules(rules_file):
+    with open(rules_file, 'r') as file:
+        return json.load(file)
 
-    # Parse arguments
+
+def main():
+    parser = argparse.ArgumentParser(description='Scan C code for potential bugs and memory inefficiencies.')
+    parser.add_argument('--model', choices=['gemini', 'openai'], default='gemini', help='Choose the AI model to use.')
+    parser.add_argument('c_code_file', help='Path to the C source code file.')
+    parser.add_argument('prompt_file', help='Path to the prompt file.')
+    parser.add_argument('output_csv_file', help='Path to the output CSV file.')
+    parser.add_argument('--rules', help='Path to the user-defined rules file.', default=None)
     args = parser.parse_args()
 
-    # Get file paths from arguments
+    if args.rules:
+        custom_rules = load_custom_rules(args.rules)
+        # Use custom_rules in the scanning process
+        print(f"Loaded custom rules: {custom_rules}")
+
     c_code_file = args.c_code_file
     prompt_file = args.prompt_file
     output_csv_file = args.output_csv_file
     ai_model_name = args.model
-
-    # Create dummy files for testing if they don't exist
-    #if not os.path.exists(c_code_file):
-    #    with open(c_code_file, 'w') as f:
-    #        f.write("int main() {\\n")
-    #        f.write("  int *ptr;\\n")
-    #        f.write("  *ptr = 10; // Potential memory issue\\n")
-    #        f.write("  return 0;\\n")
-    #        f.write("}\\n")
-
-    if not os.path.exists(prompt_file):
-        with open(prompt_file, 'w') as f:
-            f.write("Analyze the following C code line for potential bugs and memory inefficiencies. Provide a brief reason if any issues are found.\\n")
 
     if ai_model_name == "gemini":
         ai_model = GeminiAIModel()
@@ -159,3 +154,7 @@ if __name__ == '__main__':
         exit()
 
     scan_c_code(c_code_file, prompt_file, output_csv_file, ai_model)
+
+
+if __name__ == '__main__':
+    main()
